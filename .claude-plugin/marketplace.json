@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "journalism-tools",
-      "source": ".",
+      "source": "..",
       "description": "Tools for investigative journalism: Python script execution, data preprocessing with provenance tracking, and transparent data analysis"
     }
   ]
