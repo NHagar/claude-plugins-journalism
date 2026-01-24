@@ -3,8 +3,14 @@
   "description": "Tools for investigative journalism: Python script execution, data preprocessing with provenance tracking, and transparent data analysis",
   "version": "1.0.0",
   "author": {
-    "name": "Journalism Tools Contributors"
+    "name": "Nick Hagar"
   },
-  "keywords": ["journalism", "data-analysis", "python", "investigative", "transparency"],
+  "keywords": [
+    "journalism",
+    "data-analysis",
+    "python",
+    "investigative",
+    "transparency"
+  ],
   "license": "MIT"
 }

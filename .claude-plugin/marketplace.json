@@ -1,7 +1,7 @@
 {
   "name": "journalism-tools",
   "owner": {
-    "name": "Journalism Tools Contributors"
+    "name": "Nick Hagar"
   },
   "metadata": {
     "description": "Tools for investigative journalism: Python script execution with automatic dependency management, data preprocessing with provenance tracking, and transparent data analysis designed to be defensible under scrutiny."
