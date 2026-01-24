@@ -1,0 +1,16 @@
+{
+  "name": "journalism-tools",
+  "owner": {
+    "name": "Journalism Tools Contributors"
+  },
+  "metadata": {
+    "description": "Tools for investigative journalism: Python script execution with automatic dependency management, data preprocessing with provenance tracking, and transparent data analysis designed to be defensible under scrutiny."
+  },
+  "plugins": [
+    {
+      "name": "journalism-tools",
+      "source": ".",
+      "description": "Tools for investigative journalism: Python script execution, data preprocessing with provenance tracking, and transparent data analysis"
+    }
+  ]
+}

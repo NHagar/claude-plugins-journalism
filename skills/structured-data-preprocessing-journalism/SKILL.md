@@ -18,7 +18,7 @@ Preprocessing data for journalism requires higher standards than typical data sc
 
 ```
 1. LOAD       → Ingest data, establish provenance columns
-2. AUDIT      → Systematically examine every column for issues  
+2. AUDIT      → Systematically examine every column for issues
 3. REPORT     → Present findings, proposed fixes, questions to user
 4. TRANSFORM  → After approval, execute documented transformations
 5. VALIDATE   → Confirm transformations, output final dataset + audit trail
@@ -40,7 +40,7 @@ Always add these columns to loaded data:
 
 ```python
 '_source_file'    # Original filename
-'_source_sheet'   # Sheet name (if Excel) or 'csv' 
+'_source_sheet'   # Sheet name (if Excel) or 'csv'
 '_source_row'     # 1-indexed row number in original file
 '_load_timestamp' # When this record was loaded
 ```
@@ -76,7 +76,7 @@ Generate a report for human review. See `references/report-template.md` for form
 ## Critical Issues (Require Decision)
 [Issues that could affect analysis validity]
 
-## Warnings (Review Recommended)  
+## Warnings (Review Recommended)
 [Issues that may or may not need fixing]
 
 ## Proposed Transformations

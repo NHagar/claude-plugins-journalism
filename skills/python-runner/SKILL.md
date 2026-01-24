@@ -23,7 +23,7 @@ uv run --with pandas --with requests script.py
 uv run --python 3.11 script.py
 ```
 
-If uv is not installed, see `references/INSTALLATION.md`.
+If uv is not installed, see `references/install-uv.md`.
 
 ## Recommended Approach: Inline Dependencies
 
@@ -144,7 +144,7 @@ print(sys.argv)  # ['script.py', 'input.csv', '--output', 'results.json']
 ## Troubleshooting
 
 **"uv: command not found"**
-→ uv not installed. See `references/INSTALLATION.md`
+→ uv not installed. See `references/install-uv.md`
 
 **Module not found errors**
 → Add missing package to dependencies block or use `--with`

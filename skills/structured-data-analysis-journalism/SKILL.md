@@ -37,7 +37,7 @@ Before running any analysis, produce a brief report for journalist review. Save 
 
 **Question**: What investigative question does this answer?
 
-**Inputs**: 
+**Inputs**:
 - File: `filename.csv`
 - Columns: `col_a`, `col_b`, `col_c`
 
@@ -71,7 +71,7 @@ Before running any analysis, produce a brief report for journalist review. Save 
 
 ---
 
-**⏸️ AWAITING YOUR REVIEW**
+**AWAITING YOUR REVIEW**
 
 Please confirm which analyses to proceed with, answer any open questions, and flag concerns.
 ```
