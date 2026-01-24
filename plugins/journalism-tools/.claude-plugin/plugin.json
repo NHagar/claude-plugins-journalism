@@ -5,12 +5,6 @@
   "author": {
     "name": "Nick Hagar"
   },
-  "keywords": [
-    "journalism",
-    "data-analysis",
-    "python",
-    "investigative",
-    "transparency"
-  ],
+  "keywords": ["journalism", "data-analysis", "python", "investigative", "transparency"],
   "license": "MIT"
 }
