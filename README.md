@@ -13,7 +13,7 @@ Add the marketplace and install the plugin:
 
 ## Skills
 
-Once installed, you'll have access to three skills:
+Once installed, you'll have access to four skills:
 
 ### `/journalism-tools:python-runner`
 
@@ -36,6 +36,23 @@ Analyze preprocessed data for investigative journalism with full transparency. E
 - **Every number needs a source**: Statistics trace back to verifiable records
 - **Findings are hypotheses**: Analysis surfaces patterns, not proof of wrongdoing
 - **Defensibility over sophistication**: Simple analyses that hold up under scrutiny
+
+### `/journalism-tools:document-extractor`
+
+Extract structured data from documents that resist standard parsing—scanned PDFs, redacted FOIA responses, inconsistent government forms, and OCR artifacts. Follows a five-step workflow:
+
+1. **Convert** documents to page images
+2. **Transcribe** each page to markdown, preserving layout and marking redactions, illegible text, and handwriting
+3. **Stitch** page transcripts into a single document
+4. **Schema** proposal with journalist approval before extraction
+5. **Extract** to JSON with provenance tracking and a browser-based review interface
+
+Core principles:
+
+- **Provenance**: Every extracted record traces to source page and document
+- **Human-in-the-loop**: Schema must be approved before extraction proceeds
+- **Transparent ambiguity**: Redactions, illegible text, and low-confidence values are explicitly marked
+- **Zero-install review**: Generates a self-contained HTML interface for journalist verification
 
 ## Local Development
 
