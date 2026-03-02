@@ -1,497 +1,835 @@
 """
 Sportförderung in Deutschland – Haushalte und Etats
 Bundesministerien, Landesministerien und Kommunen
-Erstellt auf Basis öffentlich verfügbarer Haushaltsdaten (Stand: 2024/2025)
+Stand: 2024/2025 (ergänzt 2026/2027 wo verfügbar)
 
-Quellen:
-- Bundeshaushalt BMI Einzelplan 06, Kapitel 0602 (bundeshaushalt.de)
-- Bundestag Pressemitteilungen (bundestag.de)
-- DOSB-Berichte (dosb.de)
-- Landesregierungen und Landessportbünde
-- Sportministerkonferenz-Beschlüsse
-- Stadtportale / kommunale Haushalte
+Primärquellen:
+- Bundeshaushalt BMI Einzelplan 06, Kapitel 0602, Titelgruppe 02
+- Bundeshaushalt ab 2026: Bundeskanzleramt Einzelplan 04
+- Bundestag Drucksachen und hib-Meldungen
+- DOSB Übersicht Bundeshaushalt 2025/2026
+- Bayerisches StMI / Bayerischer Haushaltsplan Epl. 03, Kap. 03 03
+- Berliner Haushalt Epl. 05, Kap. 0510, Tit. 68419
+- Landeshaushalte aller 16 Bundesländer (Landessportbünde, Ministerien)
+- Kommunale Haushalte (München, Berlin, Köln, Hamburg u.a.)
 """
 
 import openpyxl
-from openpyxl.styles import (
-    Font, PatternFill, Alignment, Border, Side, numbers
-)
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from openpyxl.worksheet.table import Table, TableStyleInfo
 
 # ─── Datenbasis ────────────────────────────────────────────────────────────────
-# Spalten: Ebene | Bundesland | Träger / Ministerium | Einzelplan / Kapitel |
-#          Titel / Haushaltsstelle | Maßnahme / Beschreibung |
-#          Förderbereich | Betrag_Mio_EUR | Haushaltsjahr | Quelle / Anmerkung
+# Spalten:
+#  0 Ebene          (Bund / Land / Kommune)
+#  1 Bundesland     (z.B. "Bayern" oder "Gesamt (Bund)")
+#  2 Träger         (Ministerium / Behörde)
+#  3 Haushaltsstelle(Einzelplan, Kapitel, Titel-Nr.)
+#  4 Maßnahme       (Kurztitel)
+#  5 Beschreibung   (Langtext)
+#  6 Förderbereich  (Spitzensport / Breitensport / Spitzensport + Breitensport)
+#  7 Betrag_Mio_EUR (float)
+#  8 Jahr           (int)
+#  9 Quelle         (URL / Anmerkung)
 
 DATA = [
-    # ── BUND ──────────────────────────────────────────────────────────────────
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602, TGr. 02", "Gesamtsportetat BMI",
-     "Gesamter Sportetat des BMI (Titelgruppe 02) – Spitzen- und Breitensport",
+
+    # ══════════════════════════════════════════════════════════
+    # BUNDESEBENE
+    # ══════════════════════════════════════════════════════════
+
+    # ── Gesamtetat BMI 2024 ────────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "Gesamtsportetat BMI 2024",
+     "Gesamter Sportetat des BMI (Titelgruppe 02) – alle Sparten inkl. Spitzensport, "
+     "Verbände, Infrastruktur, Safe Sport, NADA",
      "Spitzensport + Breitensport", 282.55, 2024,
-     "Bundestag Pressemitteilung; BMI Jahresbericht 2024"),
+     "Bundestag hib; bmi.bund.de – Sportetat 2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602, TGr. 02", "Zentrale Maßnahmen Sport",
-     "Zentrale Maßnahmen auf dem Gebiet des Sports (inkl. Olympiakader, WM-Vorbereitung, Verbände)",
+    # ── Zentrale Maßnahmen Sport ──────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "Zentrale Maßnahmen Sport (Gesamtposition)",
+     "Zentrale Maßnahmen auf dem Gebiet des Sports – Spitzenverbände, Kader, "
+     "Trainerförderung, Olympiastützpunkte (2024-Ansatz)",
      "Spitzensport", 177.88, 2024,
-     "BMI Förderübersicht; bmi.bund.de"),
+     "bmi.bund.de; Aufschlüsselung BMI-Übersicht PDF Bundestag 15.10.2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "Olympiakader / Perspektivkader / WM-Vorbereitung",
-     "Förderung olympischer Kader und Vorbereitung auf internationale Wettkämpfe",
+    # ── Olympia-/Perspektivkader ──────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02 – TA Kader",
+     "Olympia-/Perspektivkader & int. Wettkämpfe",
+     "Förderung olympischer Kader, Perspektivkader und Vorbereitung auf "
+     "Weltmeisterschaften und internationale Wettkämpfe",
      "Spitzensport", 50.32, 2025,
-     "Bundestag hib 2025 (Planansatz 2025)"),
+     "Bundestag hib 2025 (Planansatz 2025); dosb.de Übersicht BH 2026"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "Leistungssportpersonal (Trainer, Management)",
-     "Mischfinanzierte Trainer und Managementpersonal der Bundesverbände",
+    # ── Leistungssportpersonal ────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02 – TA Personal",
+     "Leistungssportpersonal (Trainer, Management)",
+     "Mischfinanzierte Bundestrainer und Managementpersonal der Bundesfachverbände; "
+     "für 2025–2028 jährlich rund 39 Mio. €",
      "Spitzensport", 58.46, 2025,
-     "BMI Förderentscheidung Sept. 2024; Zeitraum 2025–2028 je ~39 Mio. €"),
+     "BMI Förderentscheidung Sept. 2024; bmi.bund.de Athletenförderung"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "Olympiastützpunkte und Trainingszentren",
-     "Betrieb und Investitionen Olympiastützpunkte (OSP) sowie Bundesleistungszentren",
+    # ── Olympiastützpunkte ────────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02 – TA OSP",
+     "Olympiastützpunkte und Trainingszentren",
+     "Betrieb (bis 24 Mio. €/Jahr) und Investitionen der Olympiastützpunkte (OSP) "
+     "sowie Bundesleistungszentren",
      "Spitzensport", 58.10, 2025,
      "Bundestag hib 2025 (Planansatz 2025)"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602, Tit. 684", "Nicht-olympische Verbände",
-     "Zuwendungen an Verbände nicht-olympischer Sportarten (Breitenwirkung, Inklusion)",
+    # ── Sportgroßveranstaltungen ──────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, Tit. 683 xx",
+     "Sportgroßveranstaltungen",
+     "Beteiligung des Bundes an der Ausrichtung internationaler Sportgroßveranstaltungen "
+     "in Deutschland (2025: 44,54 Mio. € u.a. Olympia-Bewerbung)",
+     "Spitzensport", 7.31, 2024,
+     "BMI Förderübersicht 2024; Bundestag hib"),
+
+    # ── Nicht-olympische Verbände ─────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, Tit. 684 xx",
+     "Nicht-olympische Verbände & World Games",
+     "Förderung von Verbänden nicht-olympischer Sportarten inkl. World Games",
      "Spitzensport", 13.50, 2024,
      "BMI Förderübersicht 2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602, Tit. 683", "Sportgroßveranstaltungen",
-     "Beteiligung des Bundes an der Ausrichtung von Sportgroßveranstaltungen in Deutschland",
-     "Spitzensport", 7.31, 2024,
-     "BMI Förderübersicht 2024"),
-
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "IAT und FES – Projektförderung",
-     "Institut für Angewandte Trainingswissenschaften (IAT) und Institut für Forschung und Entwicklung von Sportgeräten (FES)",
+    # ── IAT / FES ─────────────────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "IAT & FES – Sportwissenschaft",
+     "Institut für Angewandte Trainingswissenschaften (IAT, Leipzig) und "
+     "Institut für Forschung und Entwicklung von Sportgeräten (FES, Berlin)",
      "Spitzensport", 7.09, 2024,
      "BMI Förderübersicht 2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "NADA – Dopingbekämpfung",
-     "Zuschuss an die Nationale Anti Doping Agentur (NADA)",
+    # ── NADA ──────────────────────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "NADA – Nationale Anti-Doping-Agentur",
+     "Zuschuss Bund an die Nationale Anti Doping Agentur Deutschland (NADA)",
      "Spitzensport", 10.38, 2024,
      "BMI Förderübersicht 2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "WADA – Zuschuss",
-     "Beitrag Deutschlands an die World Anti-Doping Agency (WADA)",
+    # ── WADA ──────────────────────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "WADA – Beitrag Deutschland",
+     "Pflichtbeitrag Deutschlands an die World Anti-Doping Agency (WADA)",
      "Spitzensport", 1.26, 2024,
      "BMI Förderübersicht 2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "Zentrum Safe Sport",
-     "Unabhängige Anlaufstelle für Betroffene von Missbrauch im Sport",
-     "Spitzensport", 1.25, 2024,
+    # ── Safe Sport ────────────────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "Zentrum Safe Sport",
+     "Unabhängige Anlauf- und Beratungsstelle für Betroffene von Missbrauch im Sport",
+     "Spitzensport + Breitensport", 1.25, 2024,
      "BMI Förderübersicht 2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "Spitzensport-Agentur (Aufbau)",
+    # ── Spitzensport-Agentur ──────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "Spitzensport-Agentur (Aufbau)",
      "Anschubfinanzierung für die neue Nationale Spitzensport-Agentur",
      "Spitzensport", 0.20, 2024,
      "BMI Förderübersicht 2024"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "Sportstätten-Infrastruktur (Bauunterhaltung)",
-     "Unterrichtung, Ausstattung und Bauunterhaltung von Sportstätten für den Höchstleistungssport",
+    # ── Sportstätten-Infrastruktur ────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02 – Bau",
+     "Sportstätten Höchstleistungssport (Bauunterhaltung)",
+     "Unterrichtung, Ausstattung und Bauunterhaltung von Sportstätten des Bundes "
+     "für den Höchstleistungssport (Vorjahr: 24,6 Mio. €)",
      "Spitzensport", 18.82, 2024,
-     "BMI; Vorjahr: 24,6 Mio. €"),
+     "BMI Förderübersicht 2024; bmi.bund.de Infrastrukturförderung"),
 
-    ("Bund", "Gesamt (Bund)", "Bundesministerium des Innern (BMI)",
-     "EP 06, Kap. 0602", "Leistungssportpersonal – Jahresplanung",
-     "Jährliche Förderentscheidung für Leistungssportpersonal (Herbstplanung)",
+    # ── Jahresplanung Verbände 2024 ───────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "Jahresplanung Spitzenverbände 2024",
+     "Jahresplanung Trainings- und Lehrgangsmaßnahmen der Spitzenverbände (Herbstplanung Dez. 2024)",
      "Spitzensport", 41.00, 2024,
-     "BMI Förderentscheidung Dez. 2024"),
+     "BMI Pressemitteilung Dez. 2024"),
 
-    ("Bund", "Gesamt (Bund)", "BMFSFJ – Bundesministerium für Familie",
-     "EP 17, Kinder- und Jugendplan (KJP)", "Kinder- und Jugendplan – Sport / Breitensport",
-     "Förderung von Jugend- und Breitensport durch Sportverbände und -organisationen im Rahmen des KJP",
-     "Breitensport", 194.50, 2024,
-     "Bundestag; Vorjahr 2023: 239,1 Mio. €"),
+    # ── Bundeshaushalt 2025 Gesamtetat ───────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium des Innern und für Heimat (BMI)",
+     "EP 06, Kap. 0602, TGr. 02",
+     "Gesamtsportetat BMI 2025",
+     "Gesamter Sportetat des BMI 2025 – Steigerung gegenüber 2024 um rund 50 Mio. €",
+     "Spitzensport + Breitensport", 333.00, 2025,
+     "Bundestag hib Haushalt 2025 – Mehr Geld für den Sport"),
 
-    ("Bund", "Gesamt (Bund)", "BMWSB – Bundesbauministerium",
-     "EP 25, Investitionspakt Sportstätten", "Investitionspakt kommunale Sportstätten",
-     "Bundesanteil am Investitionspakt zur Förderung von Sportstätten (kommunal)",
+    # ── Bundeshaushalt 2026 ───────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundeskanzleramt – Staatsministerin für Sport und Ehrenamt",
+     "EP 04 (Bundeskanzleramt)",
+     "Gesamtsportetat Bundeskanzleramt 2026 (Rekord)",
+     "Ab 2026 Zuständigkeit im EP 04 (Bundeskanzleramt); Zentrale Maßnahmen Sport: "
+     "222 Mio. €, Infrastruktur: 48,1 Mio. €, Sondervermögen kommunale Sportstätten: "
+     "333 Mio. € + Schwimmbäder 250 Mio. €",
+     "Spitzensport + Breitensport", 357.50, 2026,
+     "Bundestag hib 1111704; dosb.de Bundeshaushalt 2026"),
+
+    # ── Sondervermögen kommunale Sportstätten ─────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium für Wohnen, Stadtentwicklung und Bauwesen (BMWSB)",
+     "EP 25, Sondervermögen Infrastruktur – Programm Sportstätten",
+     "Sanierung kommunaler Sportstätten (Tranche 1)",
+     "Neues Bundesprogramm 'Sanierung kommunaler Sportstätten' aus dem Sondervermögen "
+     "Infrastruktur; für Q1-Aufruf Antragssumme >7,5 Mrd. €",
+     "Breitensport", 333.00, 2025,
+     "BMWSB Pressemitteilung 2025; bisp-sportinfrastruktur.de"),
+
+    # ── Investitionspakt Sportstätten ─────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium für Wohnen, Stadtentwicklung und Bauwesen (BMWSB)",
+     "EP 25, Investitionspakt Sportstätten",
+     "Investitionspakt kommunale Sportstätten 2024",
+     "Bundesanteil am Investitionspakt zur Förderung kommunaler Sportstätten "
+     "(ergänzende Förderung neben Länder- und Kommunalmitteln)",
      "Breitensport", 60.50, 2024,
-     "BMWSB Pressemitteilung; bisp-sportinfrastruktur.de"),
+     "BMWSB; bisp-sportinfrastruktur.de – 276 Mio. € gesamt"),
 
-    ("Bund", "Gesamt (Bund)", "BMWSB – Bundesbauministerium",
-     "EP 25, Sondervermögen KTF", "Sanierung kommunaler Einrichtungen (Sport, Jugend, Kultur)",
-     "Bundesprogramm zur Sanierung kommunaler Sport-, Jugend- und Kultureinrichtungen aus dem KTF",
+    # ── Sanierung kommunaler Einrichtungen ───────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium für Wohnen, Stadtentwicklung und Bauwesen (BMWSB)",
+     "EP 25, Sondervermögen KTF",
+     "Sanierung kommunaler Einrichtungen (Sport, Jugend, Kultur)",
+     "Bundesprogramm aus dem Klima- und Transformationsfonds; "
+     "476 Mio. € im Wirtschaftsplan; davon 200 Mio. € neu 2024",
      "Breitensport", 364.60, 2024,
      "Bundestag Drucksache 20/14971"),
 
-    # ── LÄNDER ────────────────────────────────────────────────────────────────
-    # BAYERN
-    ("Land", "Bayern", "Bayerisches Staatsministerium des Innern, für Sport und Integration (StMI)",
-     "EP 03 (StMI)", "Gesamtvolumen Sportförderung Bayern",
-     "Breiten- und Nachwuchsleistungssportförderung inkl. Vereinspauschale, Verbandsförderung, Sondermaßnahmen",
+    # ── Kinder- und Jugendplan ────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium für Familie, Senioren, Frauen und Jugend (BMFSFJ)",
+     "EP 17, Kinder- und Jugendplan (KJP)",
+     "Kinder- und Jugendplan – Sport / Breitensport",
+     "Förderung von Jugend- und Breitensport durch Sportverbände im Rahmen des KJP "
+     "(Kürzung gegenüber 2023: 239,1 Mio. €)",
+     "Breitensport", 194.50, 2024,
+     "Bundestag; BMFSFJ KJP 2024"),
+
+    # ── Bundeswehr Spitzensportförderung ──────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundesministerium der Verteidigung (BMVg) – Bundeswehr",
+     "EP 14 (Verteidigung) – Personalkosten Sportsoldaten",
+     "Bundeswehr-Spitzensportförderung (890 Dienstposten)",
+     "Größter staatlicher Einzelförderer des deutschen Spitzensports; "
+     "14 Sportfördergruppen bundesweit, über 220 Disziplinen in >66 Verbänden; "
+     "890 Dienstposten für Sportsoldatinnen und -soldaten",
+     "Spitzensport", 67.00, 2025,
+     "bundeswehr.de – Spitzensport Sportförderer Bundeswehr (Stand März 2025)"),
+
+    # ── Olympia-Bewerbung 2036 ────────────────────────────────
+    ("Bund", "Gesamt (Bund)",
+     "Bundeskanzleramt – Staatsministerin für Sport und Ehrenamt",
+     "EP 04, TGr. 02",
+     "Olympia-Bewerbung Deutschland (LA 2036)",
+     "Bundesbeteiligung an der deutschen Olympia-Bewerbung für 2036",
+     "Spitzensport", 0.91, 2026,
+     "Bundestag hib 1111704; Das Parlament – Rekordwert Richtung Olympia"),
+
+    # ══════════════════════════════════════════════════════════
+    # LANDESEBENE
+    # ══════════════════════════════════════════════════════════
+
+    # ── Bayern ────────────────────────────────────────────────
+    ("Land", "Bayern",
+     "Bayerisches Staatsministerium des Innern, für Sport und Integration (StMI)",
+     "EP 03, Kap. 03 03, Tit. 684 91",
+     "Zuschüsse Breiten- und Nachwuchsleistungssport",
+     "Institutionelle Förderung Sportverbände und -dachorganisationen "
+     "(Breiten-, Nachwuchsleistungssport, Sondermaßnahmen)",
+     "Spitzensport + Breitensport", 38.31, 2024,
+     "Bayerischer Haushaltsplan Epl. 03, Kap. 03 03; blsv.de – Rekordniveau 2024"),
+
+    ("Land", "Bayern",
+     "Bayerisches Staatsministerium des Innern, für Sport und Integration (StMI)",
+     "EP 03, Kap. 03 03 – Gesamtvolumen",
+     "Gesamte Sportförderung Bayern 2024",
+     "Breiten- und Nachwuchsleistungssportförderung inkl. Vereinspauschale (+10 Mio. €), "
+     "Verbandsförderung (+10 Mio. €), Seepferdchen-Gutschein (10,8 Mio. €), "
+     "Sondermaßnahmen (4,1 Mio. €)",
      "Spitzensport + Breitensport", 110.60, 2024,
-     "StMI Bayern; blsv.de – Sportförderung auf Rekordniveau 2024"),
+     "StMI Bayern Pressemitteilung 2024; blsv.de – Sportförderung auf Rekordniveau"),
 
-    ("Land", "Bayern", "Bayerisches Staatsministerium des Innern, für Sport und Integration (StMI)",
-     "EP 03 (StMI)", "Seepferdchen-Gutscheinprogramm",
-     "Schwimmkurse für Kinder – staatlich gefördertes Gutscheinprogramm",
+    ("Land", "Bayern",
+     "Bayerisches Staatsministerium des Innern, für Sport und Integration (StMI)",
+     "EP 03, Kap. 03 03",
+     "Seepferdchen-Gutscheinprogramm",
+     "Staatlich gefördertes Schwimmkurs-Gutscheinprogramm für Kinder in Bayern",
      "Breitensport", 10.80, 2024,
-     "StMI Bayern Pressemitteilung 2024"),
+     "StMI Bayern; Bayerischer Haushaltsplan 2024"),
 
-    ("Land", "Bayern", "Bayerisches Staatsministerium des Innern, für Sport und Integration (StMI)",
-     "EP 03 (StMI)", "Sonderfördermaßnahmen Sport",
-     "Besondere Sportfördermaßnahmen (Integration, Inklusion, Projekte)",
+    ("Land", "Bayern",
+     "Bayerisches Staatsministerium des Innern, für Sport und Integration (StMI)",
+     "EP 03, Kap. 03 03",
+     "Sonderfördermaßnahmen Sport Bayern",
+     "Besondere Sportfördermaßnahmen: Integration, Inklusion, Sportprojekte",
      "Breitensport", 4.10, 2024,
      "StMI Bayern Pressemitteilung 2024"),
 
-    # NORDRHEIN-WESTFALEN
+    # ── Nordrhein-Westfalen ───────────────────────────────────
     ("Land", "Nordrhein-Westfalen",
-     "Staatskanzlei NRW, Abt. Sport und Ehrenamt / MHKBG NRW",
-     "NRW-Sportmilliarde", "NRW-Sportmilliarde – Kommunale Sportstätten & Schwimmbäder",
-     "Investitionsprogramm für Neubau und Sanierung kommunaler Sportstätten (600 Mio.) + Sportpauschale (375 Mio.)",
-     "Breitensport", 975.00, 2024,
-     "Staatskanzlei NRW; lsb.nrw – Sportmilliarde (Laufzeit mehrere Jahre)"),
+     "Staatskanzlei NRW – Sport und Ehrenamt / MIK NRW",
+     "NRW-Haushalt – Sportpauschale (GFG)",
+     "Sportpauschale NRW (jährlich, einwohnerbasiert an Kommunen)",
+     "Jährliche Sportpauschale aus dem Gemeindefinanzierungsgesetz (GFG) "
+     "an die Kommunen NRWs für Sportstätteninfrastruktur",
+     "Breitensport", 69.00, 2024,
+     "sportland.nrw – Die Sportpauschale; lsb.nrw"),
 
     ("Land", "Nordrhein-Westfalen",
-     "Staatskanzlei NRW / Landessportbund NRW (LSB)",
-     "LSB NRW – Sportförderung", "Laufende Sportförderung über den LSB NRW",
-     "Jährliche institutionelle Sportförderung (Verbände, Vereine, Jugend) über den LSB NRW",
-     "Breitensport", 66.00, 2024,
-     "lsb.nrw – Rund eine Milliarde Euro für den Sport in NRW"),
-
-    ("Land", "Nordrhein-Westfalen",
-     "Ministerium für Heimat, Kommunales, Bau und Digitalisierung NRW (MHKBD)",
-     "Investitionspakt Sportstätten NRW", "Investitionspakt Sportstätten – 66 Projekte",
-     "50 Mio. € Bundesmittel + Landesmittel für 66 Sportstättenprojekte in Städten und Gemeinden",
-     "Breitensport", 50.00, 2024,
-     "MHKBD.NRW Pressemitteilung 2024"),
+     "Staatskanzlei NRW / Landessportbund NRW (LSB NRW)",
+     "NRW-Haushalt – LSB-Förderung",
+     "Institutionelle Förderung über LSB NRW",
+     "Jährliche Förderung des organisierten Sports (Verbände, Vereine, Jugend, "
+     "Übungsleiter) über den Landessportbund NRW",
+     "Breitensport", 7.56, 2024,
+     "land.nrw – mehr als 88 Mio. für Sportvereine NRW"),
 
     ("Land", "Nordrhein-Westfalen",
      "Staatskanzlei NRW",
-     "EU-Programm REACT-EU (NRW)", "Digitalisierungsoffensive Breitensport NRW",
-     "EU-Mittel für digitale Infrastruktur gemeinnütziger Sportorganisationen in NRW",
-     "Breitensport", 30.00, 2024,
-     "land.nrw – Digitalisierungsoffensive Sportorganisationen"),
+     "NRW-Sportmilliarde – Kommunale Sportstätten + Schwimmbäder",
+     "NRW-Sportmilliarde: 600 Mio. € kommunale Sportstätten (2025–2030)",
+     "Investitionsprogramm für Neubau und Sanierung kommunaler Sportstätten "
+     "und Schwimmbäder (600 Mio. €) + Sportpauschale 5 Jahre (375 Mio. €) = "
+     "~975 Mio. € Gesamtpaket",
+     "Breitensport", 975.00, 2025,
+     "sportland.nrw – NRW-Sportmilliarde; lsb.nrw PM (Laufzeit 2025–2030)"),
 
-    # BERLIN
-    ("Land", "Berlin",
-     "Senatsverwaltung für Inneres und Sport Berlin",
-     "Berliner Haushalt (Sportförderung)", "Sportförderung Berlin – Gesamtvolumen Doppelhaushalt",
-     "Förderung von Sport-/Breitensport aus Berliner Haushalt und Lottomitteln (Doppelhaushalt)",
-     "Breitensport", 33.00, 2024,
-     "Tagesspiegel; Senat reformiert Sportförderung Berlin"),
+    ("Land", "Nordrhein-Westfalen",
+     "Ministerium für Heimat, Kommunales, Bau und Digitalisierung NRW (MHKBD)",
+     "NRW-Haushalt – Investitionspakt Sportstätten",
+     "Investitionspakt Sportstätten NRW – 66 Projekte",
+     "Gemeinsame Förderung von Bund und Land NRW für 66 Sportstättenprojekte "
+     "in Städten und Gemeinden (Bundesanteil + Landesanteil)",
+     "Breitensport", 50.00, 2024,
+     "mhkbd.nrw Pressemitteilung 2024 – Rund 50 Mio. € für 66 Projekte"),
 
-    # SACHSEN
-    ("Land", "Sachsen",
-     "Sächsisches Staatsministerium des Innern (SMI)",
-     "Sächsischer Haushalt – Sportförderung", "Sportförderung Sachsen 2022",
-     "Breiten-, Nachwuchs- und Leistungssportförderung inkl. Verbände und Vereine",
-     "Spitzensport + Breitensport", 26.30, 2022,
-     "kreissportbund.net; Sachsen erhöht Sportförderung (Doppelhaushalt 2021/2022)"),
+    ("Land", "Nordrhein-Westfalen",
+     "Staatskanzlei NRW",
+     "Programm '1.000 x 1.000 – Anerkennung für Sportvereine'",
+     "Vereinsanerkennung NRW – '1.000 x 1.000'",
+     "Direktzuschüsse an 1.000 ausgewählte Sportvereine (je 1.000 €) als "
+     "Anerkennung für ihr ehrenamtliches Engagement",
+     "Breitensport", 1.25, 2024,
+     "land.nrw Pressemitteilung – Digitalisierungsoffensive / Vereinsförderung"),
 
-    ("Land", "Sachsen",
-     "Sächsisches Staatsministerium des Innern (SMI)",
-     "Sächsischer Haushalt – Sportförderung", "Sportförderung Sachsen 2021",
-     "Breiten-, Nachwuchs- und Leistungssportförderung inkl. Verbände und Vereine",
-     "Spitzensport + Breitensport", 25.70, 2021,
-     "kreissportbund.net; Sachsen erhöht Sportförderung (Doppelhaushalt 2021/2022)"),
-
-    # BRANDENBURG
-    ("Land", "Brandenburg",
-     "Ministerium für Bildung, Jugend und Sport Brandenburg (MBJS)",
-     "Brandenburger Haushalt – Sportförderung", "Sportförderung Brandenburg 2022/2023",
-     "Breiten- und Leistungssportförderung (Vereine, Projekte, Nachwuchs) – Doppelhaushalt",
-     "Spitzensport + Breitensport", 59.30, 2022,
-     "Landesregierung Brandenburg Pressemitteilung (59,3 Mio. für 2022+2023 gesamt)"),
-
-    # BADEN-WÜRTTEMBERG
+    # ── Baden-Württemberg ─────────────────────────────────────
     ("Land", "Baden-Württemberg",
      "Ministerium für Kultus, Jugend und Sport Baden-Württemberg (KM BW)",
-     "BW-Haushalt – Sportstättenförderung", "Sportstättenbau – 117 kommunale Projekte",
-     "Zuschüsse für Neubau und Sanierung von Sporthallen und Freisportanlagen",
-     "Breitensport", 18.30, 2024,
+     "BW-Haushalt – Sportstättenbauförderung",
+     "Sportstättenbau 2024 – 117 kommunale Projekte",
+     "Zuschüsse für Neubau und Sanierung von Sporthallen und Freisportanlagen "
+     "in Kommunen und Vereinen",
+     "Breitensport", 17.30, 2024,
      "km.baden-wuerttemberg.de; Regierungspräsidium Stuttgart PM 2024"),
 
-    # SACHSEN-ANHALT
+    ("Land", "Baden-Württemberg",
+     "Ministerium für Kultus, Jugend und Sport Baden-Württemberg (KM BW)",
+     "BW-Haushalt DH 2025/2026 – Sport",
+     "Sportstättenbauförderung BW 2025 (LuKIFG-Nachtrag)",
+     "Zusätzliche Sportstättenförderung aus LuKIFG (Landesanteil Sondervermögen): "
+     "80 Mio. € als Einmalmaßnahme 2025",
+     "Breitensport", 80.00, 2025,
+     "fm.baden-wuerttemberg.de Landeshaushalt 2025/2026"),
+
+    ("Land", "Baden-Württemberg",
+     "Ministerium für Kultus, Jugend und Sport Baden-Württemberg (KM BW)",
+     "BW-Haushalt 2027–2031 – Sportvereine",
+     "Langfristpaket Sportvereine BW 2027–2031 (605 Mio. €)",
+     "Gesamtpaket für Sportvereine und Verbände in Baden-Württemberg "
+     "über fünf Jahre (ab 2027)",
+     "Breitensport", 605.00, 2027,
+     "stm.bw.de – Mehr als 600 Mio. € für Sportvereine und Verbände"),
+
+    # ── Berlin ────────────────────────────────────────────────
+    ("Land", "Berlin",
+     "Senatsverwaltung für Inneres und Sport Berlin",
+     "EP 05, Kap. 0510, Tit. 68419",
+     "Förderung des Sports (§ 15 SportFG Berlin)",
+     "Institutionelle Förderung des organisierten Sports in Berlin nach "
+     "§ 15 Sportförderungsgesetz (LSB Berlin, Fachverbände, Vereine)",
+     "Spitzensport + Breitensport", 25.00, 2024,
+     "berlin.de/sen/inneres Sportförderung; Parlamentsdokument sp19-0093"),
+
+    ("Land", "Berlin",
+     "Senatsverwaltung für Inneres und Sport Berlin",
+     "EP 05, Kap. 0510, Tit. 68419 – TA 7",
+     "Landestrainerinnen/-trainer Berlin",
+     "Vergütung und Betriebskosten der Landestrainer (Nachwuchsleistungssport Berlin)",
+     "Spitzensport", 3.65, 2024,
+     "Parlamentsdokument sp19-0093; Haushalt Berlin EP 05"),
+
+    ("Land", "Berlin",
+     "Senatsverwaltung für Inneres und Sport Berlin",
+     "EP 05, Kap. 0510 – Sportstättensanierung",
+     "Sportstättensanierungsprogramm Berlin",
+     "Zweckgebundene Mittel für die Sanierung bezirklicher Sportstätten "
+     "(2024 abgerufen: 23,12 Mio. €)",
+     "Breitensport", 24.15, 2024,
+     "berlin.de/rbmskzl Pressemitteilung 2025 – Sportstättensanierung 2024"),
+
+    ("Land", "Berlin",
+     "Senatsverwaltung für Inneres und Sport Berlin",
+     "EP 05 – Friedrich-Ludwig-Jahn-Sportpark",
+     "Neubau Friedrich-Ludwig-Jahn-Sportpark",
+     "Investition in den Neubau des Jahn-Sportparks als modernes Sportzentrum "
+     "(Gesamtvolumen Hauptbauabschnitt bis 2025)",
+     "Spitzensport + Breitensport", 30.00, 2025,
+     "Senatsverwaltung Berlin – Jahn-Sportpark Projekt"),
+
+    ("Land", "Berlin",
+     "Senatsverwaltung für Inneres und Sport Berlin",
+     "EP 05, Kap. 0510 – TA 18",
+     "'Berlin bewegt sich' – Breitensportbewegung",
+     "Kampagnenförderung für Breitensportbewegung und Gesundheitssport",
+     "Breitensport", 0.25, 2024,
+     "Parlamentsdokument sp19-0093"),
+
+    # ── Hamburg ───────────────────────────────────────────────
+    ("Land", "Hamburg",
+     "Behörde für Inneres und Sport (BIS) Hamburg",
+     "HH-Haushalt – Sportfördervertrag",
+     "Sportfördervertrag Hamburg 2025–2026 (mit Hamburger Sportbund HSB)",
+     "Neue Sportfördervereinbarung 2025/2026: +750.000 €/Jahr gegenüber Vorperiode; "
+     "Steigerung seit 2017/2018 um 46% (9,2 → 13,4 Mio. €/Jahr)",
+     "Breitensport", 13.40, 2025,
+     "hamburg.de PM – Neuer Sportfördervertrag 2025; SPD Fraktion Hamburg"),
+
+    # ── Sachsen ───────────────────────────────────────────────
+    ("Land", "Sachsen",
+     "Sächsisches Staatsministerium des Innern (SMI)",
+     "Sächsischer Haushalt – Zuwendungsvertrag Sport (LSB Sachsen)",
+     "Sportförderung Sachsen 2025 (Zuwendungsvertrag LSB)",
+     "Breiten- und Leistungssportförderung inkl. Vereinsförderung (10,3 Mio. €), "
+     "Inklusion (136.000 €); Gesamtpaket 2025+2026: 59,7 Mio. €",
+     "Spitzensport + Breitensport", 28.80, 2025,
+     "sport-fuer-sachsen.de – Neuer Zuwendungsvertrag LSB Sachsen"),
+
+    ("Land", "Sachsen",
+     "Sächsisches Staatsministerium des Innern (SMI)",
+     "Sächsischer Haushalt – Investive Sportförderung",
+     "Investive Sportförderung Sachsen 2026",
+     "Investitionen in Sportstätten und Sportinfrastruktur",
+     "Breitensport", 0.85, 2026,
+     "medienservice.sachsen.de – Investive Sportförderung 2025/2026"),
+
+    # ── Brandenburg ───────────────────────────────────────────
+    ("Land", "Brandenburg",
+     "Ministerium für Bildung, Jugend und Sport Brandenburg (MBJS)",
+     "Brandenburger Haushalt – Sportfördergesetz",
+     "Sportförderung Brandenburg 2025 (neues Sportfördergesetz)",
+     "Breiten- und Leistungssportförderung nach neuem Sportfördergesetz; "
+     "Doppelhaushalt 2025+2026: 55 Mio. €",
+     "Spitzensport + Breitensport", 27.00, 2025,
+     "LSB Brandenburg – neues Sportfördergesetz; lsb-brandenburg.de Haushaltsplan 2025"),
+
+    ("Land", "Brandenburg",
+     "Ministerium für Bildung, Jugend und Sport Brandenburg (MBJS)",
+     "Brandenburger Haushalt – Goldener Plan",
+     "Goldener Plan Brandenburg (2021–2024, jährlich)",
+     "Investitionsprogramm für Sportstätten in Kommunen und Vereinen; "
+     "jährlich 6,25 Mio. €",
+     "Breitensport", 6.25, 2024,
+     "MBJS Brandenburg – Goldener Plan Sportstätten"),
+
+    # ── Rheinland-Pfalz ───────────────────────────────────────
+    ("Land", "Rheinland-Pfalz",
+     "Ministerium des Innern und für Sport Rheinland-Pfalz (MdI RLP)",
+     "RLP-Haushalt – Sportförderung gesamt",
+     "Gesamte Sportförderung RLP 2024",
+     "Sportstättenförderung (16,7 Mio. €), Projektförderung LSB RLP (13,62 Mio. €), "
+     "Leistungssportförderung (3,55 Mio. €), Aus-/Fortbildung (3,6 Mio. €)",
+     "Spitzensport + Breitensport", 38.00, 2024,
+     "mdi.rlp.de – Rekordförderung Sport RLP"),
+
+    ("Land", "Rheinland-Pfalz",
+     "Ministerium des Innern und für Sport Rheinland-Pfalz (MdI RLP)",
+     "RLP-Haushalt – Leistungssportförderung",
+     "Leistungssportförderung RLP 2025",
+     "Steigerung gegenüber 2020 (1,8 Mio. €) um 97% auf 3,55 Mio. € im Jahr 2025",
+     "Spitzensport", 3.55, 2025,
+     "mdi.rlp.de – Rekordförderung Rheinland-Pfalz"),
+
+    ("Land", "Rheinland-Pfalz",
+     "Ministerium des Innern und für Sport Rheinland-Pfalz (MdI RLP)",
+     "RLP-Haushalt – LSB RLP Projektförderung",
+     "Projektförderung LSB Rheinland-Pfalz 2025",
+     "Institutionelle Förderung des Landessportbundes RLP für Breitensport, "
+     "Vereine und Verbände",
+     "Breitensport", 13.62, 2025,
+     "mdi.rlp.de – Rekordförderung Rheinland-Pfalz"),
+
+    # ── Mecklenburg-Vorpommern ────────────────────────────────
+    ("Land", "Mecklenburg-Vorpommern",
+     "Ministerium für Inneres, Bau und Digitalisierung MV",
+     "MV-Haushalt DH 2024/2025 – Sportförderung",
+     "Allgemeine Sportförderung MV (gesetzlich festgeschrieben)",
+     "Allgemeine Sportförderung gemäß Sportfördergesetz MV; "
+     "DH 2024/2025: 12,84 Mio. €; gesetzlich festgeschrieben: 11,92 Mio. €; "
+     "Steigerung gegenüber Vorperiode (+3 Mio. €)",
+     "Spitzensport + Breitensport", 12.84, 2024,
+     "Regierung MV Pressemitteilung; Landtag MV Sozialausschuss 8-919"),
+
+    ("Land", "Mecklenburg-Vorpommern",
+     "Ministerium für Inneres, Bau und Digitalisierung MV",
+     "EU-ELER-Programm – Sportinfrastruktur MV",
+     "EU-ELER-Mittel für Sportinfrastruktur MV",
+     "Europäischer Landwirtschaftsfonds für ländliche Entwicklung (ELER): "
+     "Förderung von Sportinfrastruktur in ländlichen Gebieten MV bis 2027",
+     "Breitensport", 12.90, 2027,
+     "Regierung MV – EU-ELER Sportinfrastruktur"),
+
+    # ── Sachsen-Anhalt ────────────────────────────────────────
     ("Land", "Sachsen-Anhalt",
-     "Ministerium für Inneres und Sport Sachsen-Anhalt",
-     "LSB Sachsen-Anhalt – Sportstättenförderung", "Vereinssportstättenbau Sachsen-Anhalt",
-     "Förderung von Neubau und Sanierung von Vereinssportstätten (98 Bauvorhaben)",
+     "Ministerium für Inneres und Sport Sachsen-Anhalt (MI ST)",
+     "ST-Haushalt – Vereinssportstättenbau",
+     "Vereinssportstättenbau Sachsen-Anhalt 2024",
+     "Förderung von Neubau und Sanierung vereinseigener Sportanlagen "
+     "(98 geprüfte Bauvorhaben bewilligt)",
      "Breitensport", 5.60, 2024,
      "lsb-sachsen-anhalt.de – Vereinssportstätten 2024 mit 5,6 Mio. € gefördert"),
 
-    # SAARLAND
-    ("Land", "Saarland",
-     "Ministerium des Innern, für Sport, Infrastruktur und Kommunales Saarland",
-     "Saarländischer Haushalt – Sportförderung", "Spitzensportförderung Saarland",
-     "Zuwendungsbudget für den Spitzensport (erhöht um 250.000 €)",
-     "Spitzensport", 0.33, 2024,
-     "Homburg1.de; Olympische und Paralympische Spiele 2024 – Zuwendungen 1,1 Mio. € gesamt"),
-
-    ("Land", "Saarland",
-     "Ministerium des Innern, für Sport, Infrastruktur und Kommunales Saarland",
-     "Saarländischer Haushalt – Sportveranstaltungen", "Sportveranstaltungen Saarland",
-     "Förderbudget für besondere sportliche Veranstaltungen mit überregionalem Stellenwert",
-     "Spitzensport + Breitensport", 0.71, 2024,
-     "Homburg1.de Pressemitteilung 2024"),
-
-    # HESSEN
-    ("Land", "Hessen",
-     "Hessisches Ministerium des Innern, für Sicherheit und Heimatschutz (HMdIS)",
-     "Hessischer Haushalt – Sportförderung", "Sportprojektförderung Hessen Q1–Q3 2024",
-     "Förderung von 1.001 Sportprojekten im Jahr 2024 (Stand nach Q3: 233 Projekte mit 10,6 Mio. €)",
-     "Breitensport", 10.60, 2024,
-     "familie.hessen.de; innen.hessen.de – 233 Sportprojekte mit 10,6 Mio. € gefördert (Q3 2024)"),
-
-    # NIEDERSACHSEN
-    ("Land", "Niedersachsen",
-     "Niedersächsisches Ministerium für Inneres und Sport (MI Niedersachsen)",
-     "Nds. Haushalt – Sportstättensanierung", "Sportstättensanierungsprogramm Niedersachsen",
-     "Sanierung kommunaler und vereinseigener Sportstätten (80 Mio. kommunal + 20 Mio. Vereine)",
-     "Breitensport", 100.00, 2019,
-     "mi.niedersachsen.de – 100 Mio. Euro-Programm (Laufzeit 2019–2022)"),
-
-    # SCHLESWIG-HOLSTEIN
+    # ── Schleswig-Holstein ────────────────────────────────────
     ("Land", "Schleswig-Holstein",
-     "Ministerium für Inneres, Kommunales, Wohnen und Sport Schleswig-Holstein",
-     "SH-Haushalt – Sportstättenförderung", "Sportstättensanierung Schleswig-Holstein",
-     "Jährliche Förderung der Sportstättensanierung aus Landesmitteln (Schwerpunkt Schwimmsport)",
+     "Ministerium für Inneres, Kommunales, Wohnen und Sport SH",
+     "SH-Haushalt – Sportstättenförderung",
+     "Sportstättensanierung SH (jährlich, Schwerpunkt Schwimmsport)",
+     "Jährliche Landesförderung der Sportstättensanierung mit Schwerpunkt "
+     "auf Schwimmsportanlagen",
      "Breitensport", 2.00, 2024,
-     "SPD Schleswig-Holstein Sportpolitik; Landeshaushalt SH 2024 (geschätzt Vorjahresbasis)"),
+     "SPD SH Sportpolitik; SH Haushaltsplan"),
 
     ("Land", "Schleswig-Holstein",
-     "Ministerium für Inneres, Kommunales, Wohnen und Sport Schleswig-Holstein",
-     "SH-Haushalt – Sportförderung (Glücksspielmittel)", "Sportförderung aus Glücksspielmitteln SH",
-     "Sportförderung über Lottomittel an den LSB Schleswig-Holstein",
+     "Ministerium für Inneres, Kommunales, Wohnen und Sport SH",
+     "SH-Haushalt – Sportförderung Glücksspielmittel",
+     "Sportförderung SH aus Lotterieabgabe",
+     "Sportförderung über Lottomittel an den Landessportverband SH "
+     "(Schätzwert 2024 auf Basis 2015-Wert: 8 Mio. €)",
      "Breitensport", 8.00, 2024,
-     "SPD SH Sportpolitik; Wert von 2015: 8 Mio. €, Schätzwert 2024"),
+     "SPD SH – Sportpolitik; Wert Stand 2015"),
 
-    # ── KOMMUNEN ──────────────────────────────────────────────────────────────
-    ("Kommune", "Bayern", "Landeshauptstadt München",
-     "Stadthaushalt München – Sport", "Sportamt München – Betrieb öffentlicher Sportanlagen",
-     "Betrieb und Unterhalt städtischer Sportstätten, Freibäder, Hallen durch Sportamt",
-     "Breitensport", 85.00, 2024,
-     "Münchner Stadthaushalt 2024 (Schätzwert auf Basis Mehrjahresplanung Sportamt)"),
+    # ── Niedersachsen ─────────────────────────────────────────
+    ("Land", "Niedersachsen",
+     "Ministerium für Inneres, Sport und Digitalisierung Niedersachsen (MI Nds.)",
+     "Nds.-Haushalt – Landeshilfe an LSB (NSportFG)",
+     "Landeshilfe Niedersachsen an LSB (NSportFG)",
+     "Jährliche Förderung nach Niedersächsischem Sportfördergesetz an den "
+     "Landessportbund Niedersachsen für Vereine, Verbände, Übungsleiter",
+     "Breitensport", 35.20, 2024,
+     "mi.niedersachsen.de Sportbericht 2024"),
 
-    ("Kommune", "Bayern", "Landeshauptstadt München",
-     "Stadthaushalt München – Sport", "Sportförderung Vereine und Verbände München",
-     "Direkte Vereinsförderung, Jugend- und Breitensportförderung der Stadt München",
-     "Breitensport", 15.00, 2024,
-     "Stadthaushalt München 2024 (Schätzwert; offizielle Veröffentlichung Referat für Bildung und Sport)"),
+    ("Land", "Niedersachsen",
+     "Ministerium für Inneres, Sport und Digitalisierung Niedersachsen (MI Nds.)",
+     "Nds.-Haushalt – Glücksspielabgabe Sport",
+     "Sportförderung Nds. aus Lotterieabgabe",
+     "Sportförderung über Glücksspielabgabe (Lottomittel) in Niedersachsen",
+     "Breitensport", 14.80, 2024,
+     "mi.niedersachsen.de Sportbericht 2024"),
 
-    ("Kommune", "Nordrhein-Westfalen", "Stadt Köln",
-     "Kölner Stadthaushalt – Sport", "Sportförderung Köln (Betrieb und Zuschüsse)",
-     "Betrieb kommunaler Sportanlagen und Vereinsförderung durch die Stadt Köln",
-     "Breitensport", 50.00, 2024,
-     "Kölner Stadthaushalt 2024 (Schätzwert – Amt für Stadtentwicklung und Statistik)"),
+    ("Land", "Niedersachsen",
+     "Ministerium für Inneres, Sport und Digitalisierung Niedersachsen (MI Nds.)",
+     "Nds.-Haushalt 2025 – Sportstätteninvestitionsprogramm",
+     "Sportstätteninvestitionsprogramm Nds. 2025",
+     "20 Mio. € kommunaler Sportstättenbau + 5 Mio. € Vereinssportstättenbau",
+     "Breitensport", 25.00, 2025,
+     "mi.niedersachsen.de – 25 Mio. Euro für Sportstätten in Niedersachsen"),
 
-    ("Kommune", "Nordrhein-Westfalen", "Stadt Dortmund",
-     "Dortmunder Stadthaushalt – Sport", "Sportförderung Dortmund",
-     "Kommunale Sportförderung inkl. Sportstättenunterhalt und Vereinsförderung",
-     "Breitensport", 30.00, 2024,
-     "Stadthaushalt Dortmund 2024 (Schätzwert)"),
+    # ── Hessen ────────────────────────────────────────────────
+    ("Land", "Hessen",
+     "Hessisches Ministerium für Familie, Senioren, Sport, Gesundheit und Pflege (HMFG)",
+     "HE-Haushalt – Sportprojektförderung 2024",
+     "Sportprojektförderung Hessen 2024 (1.001 Projekte)",
+     "Förderung von 1.001 Sportprojekten in Hessen im Jahr 2024 "
+     "(Q3-Stand: 233 Projekte mit 10,6 Mio. €; Q1: 3,6 Mio. €)",
+     "Breitensport", 40.00, 2024,
+     "familie.hessen.de – 233 Sportprojekte 10,6 Mio. €; innen.hessen.de"),
 
-    ("Kommune", "Hamburg", "Freie und Hansestadt Hamburg",
-     "Hamburger Haushalt – Sport", "Bezirks- und Landesförderung Sport Hamburg",
-     "Sportförderung über Behörde für Inneres und Sport sowie Bezirksämter Hamburg",
-     "Breitensport", 45.00, 2024,
-     "Behörde für Inneres und Sport Hamburg; Schätzwert auf Basis Sportbericht Hamburg"),
+    ("Land", "Hessen",
+     "Hessisches Ministerium des Innern und für Sport (HMdIS)",
+     "HE-Haushalt – LSB Hessen institutionelle Förderung",
+     "Institutionelle Förderung LSB Hessen",
+     "Regelzuwendung an den Landessportbund Hessen für institutionelle Aufgaben",
+     "Breitensport", 1.30, 2024,
+     "innen.hessen.de – Landessportbund erhält Förderung von rund 1,3 Mio. €"),
 
-    ("Kommune", "Berlin", "Land Berlin (Bezirke)",
-     "Berliner Bezirkshaushalte – Sport", "Bezirkliche Sportförderung Berlin",
-     "Sportförderung und Sportstättenbetrieb durch die 12 Berliner Bezirke (additiv)",
-     "Breitensport", 120.00, 2024,
-     "Senatsverwaltung für Sport Berlin; Gesamtschätzung alle 12 Bezirke 2024"),
+    # ── Bremen ────────────────────────────────────────────────
+    ("Land", "Bremen",
+     "Senator für Inneres / Sportdeputation Bremen",
+     "Bremer Haushalt DH 2024/2025 – Sport",
+     "Gesamtsportförderung Bremen DH 2024/2025",
+     "Gesamte Sportförderung inkl. Großprojekt Westbad (11,03 Mio. € 2024, "
+     "4,51 Mio. € 2025) und Vereinssportstättensanierung (>800.000 €)",
+     "Breitensport", 32.57, 2024,
+     "senatspressestelle.bremen.de – Sportdeputation Haushalt 2024/2025"),
 
-    ("Kommune", "Nordrhein-Westfalen", "Bundesstadt Bonn",
-     "Bonner Stadthaushalt – Sport", "Sportförderung Bonn",
-     "Kommunale Sportförderung (Sportstätten, Vereine, Jugend) in der Bundesstadt Bonn",
+    # ── Saarland ──────────────────────────────────────────────
+    ("Land", "Saarland",
+     "Ministerium für Inneres, Bauen und Sport Saarland (MIBS)",
+     "SL-Haushalt – Spitzensportförderung",
+     "Zuwendungsbudget Spitzensport Saarland 2024 (erhöht)",
+     "Erhöhung um 250.000 € auf 332.800 € Gesamtvolumen für den Spitzensport; "
+     "zusätzlich 600.000 € Sportoto-Mittel (Olympia Paris 2024)",
+     "Spitzensport", 0.33, 2024,
+     "saarland.de – Olympia 2024 Zuwendungen; Homburg1.de PM"),
+
+    ("Land", "Saarland",
+     "Ministerium für Inneres, Bauen und Sport Saarland (MIBS)",
+     "SL-Haushalt – Sportveranstaltungen",
+     "Budget Sportveranstaltungen Saarland 2024 (erhöht)",
+     "Förderbudget für besondere sportliche Veranstaltungen mit überregionalem "
+     "Stellenwert (erhöht um 190.000 € auf 710.000 €)",
+     "Spitzensport + Breitensport", 0.71, 2024,
+     "Homburg1.de PM 2024 – Olympia-Zuwendungen Saarland"),
+
+    # ── Thüringen ─────────────────────────────────────────────
+    ("Land", "Thüringen",
+     "Thüringer Ministerium für Bildung, Jugend und Sport (TMBJS)",
+     "TH-Haushalt – Vereinseigener Sportstättenbau",
+     "Vereinseigener Sportstättenbau Thüringen",
+     "Investitionszuschüsse für Bau und Sanierung vereinseigener Sportanlagen "
+     "(LSB Thüringen verwaltet)",
+     "Breitensport", 2.00, 2024,
+     "thueringen-sport.de – 2 Mio. für vereinseigene Sportstätten 2024"),
+
+    ("Land", "Thüringen",
+     "Thüringer Ministerium für Bildung, Jugend und Sport (TMBJS)",
+     "TH-Haushalt DH 2026/2027 – Gesamtsportförderung",
+     "Gesamtförderung Sport Thüringen 2026/2027",
+     "Gemeindesportstätten: 12,75 Mio. € (2026) / 10,55 Mio. €; "
+     "Nachwuchstrainer: 3,25 Mio. € (2026); Spitzensport: ~1,1 Mio. €; "
+     "Vereine/Verbände: min. 2,7 Mio. €; Gesamtschätzung ~35 Mio. €/Jahr",
+     "Spitzensport + Breitensport", 35.00, 2026,
+     "TMBJS Thüringen – Haushaltsplanung 2026/2027; LSB Thüringen"),
+
+    # ══════════════════════════════════════════════════════════
+    # KOMMUNALE EBENE
+    # ══════════════════════════════════════════════════════════
+
+    ("Kommune", "Bayern",
+     "Landeshauptstadt München – Referat für Bildung und Sport",
+     "Stadthaushalt München – Sportbetriebspauschale + Unterhalt",
+     "Direkte Sportförderung München 2025 (Vereine + Unterhalt)",
+     "Sportbetriebspauschale und Unterhaltsförderung für Vereinssportanlagen; "
+     "+500.000 € Erhöhung beider Positionen 2025 gegenüber Vorjahr",
+     "Breitensport", 7.00, 2025,
+     "spd-muenchen.de – Stadt unterstützt Sportvereine 2025 mit rund 7 Mio. €"),
+
+    ("Kommune", "Berlin",
+     "Senatsverwaltung für Inneres und Sport Berlin – Bezirke",
+     "Berliner Bezirkshaushalte – Sportstättensanierung",
+     "Sportstättensanierungsprogramm Berlin an Bezirke 2024",
+     "Zweckgebundene Landesmittel für Sanierung bezirklicher Sportstätten "
+     "(abgerufen 2024: 23,12 Mio. €; Programmmittel: 24,15 Mio. €)",
+     "Breitensport", 23.12, 2024,
+     "berlin.de/rbmskzl – Sportstättensanierung Bericht 2024"),
+
+    ("Kommune", "Nordrhein-Westfalen",
+     "Stadt Köln – Dezernat für Sport und Infrastruktur",
+     "Kölner Stadthaushalt DH 2023/2024 – Sport",
+     "Sportförderung und Unterhaltung Sportstätten Köln",
+     "Maßnahmenkatalog Sportförderung und Unterhaltung kommunaler Sportstätten "
+     "im Doppelhaushalt 2023/2024 (ca. 22,9 Mio. €/Jahr)",
+     "Breitensport", 22.90, 2024,
+     "gruenekoeln.de – Analyse Kölner Haushaltssatzung 2023/2024"),
+
+    ("Kommune", "Hamburg",
+     "Bezirksämter Hamburg / Behörde für Inneres und Sport",
+     "Hamburger Haushalt – Kommunale Sportförderung",
+     "Kommunale Sportförderung Hamburg (Bezirke + BIS)",
+     "Sportförderung durch die Hamburgischen Bezirksämter und die Behörde "
+     "für Inneres und Sport (Sportstättenbetrieb, Vereine, Veranstaltungen)",
+     "Breitensport", 20.00, 2024,
+     "BIS Hamburg; Hamburger Haushalt 2024 (Schätzwert)"),
+
+    ("Kommune", "Nordrhein-Westfalen",
+     "Stadt Düsseldorf – Sportamt",
+     "Düsseldorfer Stadthaushalt – Sport",
+     "Kommunale Sportförderung Düsseldorf",
+     "Betrieb kommunaler Sportanlagen und Vereinsförderung "
+     "(inkl. Hallennutzung, Zuschüsse)",
+     "Breitensport", 18.00, 2024,
+     "Stadthaushalt Düsseldorf 2024 (Schätzwert; Sportamt Düsseldorf)"),
+
+    ("Kommune", "Bayern",
+     "Stadt Nürnberg – Stadtrat Sport",
+     "Nürnberger Stadthaushalt – Sport",
+     "Kommunale Sportförderung Nürnberg",
+     "Betrieb kommunaler Sportstätten und Vereinsförderung in Nürnberg",
      "Breitensport", 12.00, 2024,
-     "Stadt Bonn Haushaltsplan 2024 (Schätzwert)"),
+     "Stadthaushalt Nürnberg 2024 (Schätzwert)"),
+
+    ("Kommune", "Sachsen",
+     "Landeshauptstadt Dresden – Sportamt",
+     "Dresdner Stadthaushalt – Sport",
+     "Kommunale Sportförderung Dresden",
+     "Betrieb kommunaler Sportstätten, Vereinsförderung und Veranstaltungen",
+     "Breitensport", 15.00, 2024,
+     "Stadthaushalt Dresden 2024 (Schätzwert; Sportamt Dresden)"),
 ]
 
-# Spaltentitel
-COLS_POSITIONEN = [
-    "Ebene", "Bundesland", "Träger / Ministerium",
-    "Einzelplan / Kapitel / Haushaltsstelle",
-    "Titel / Maßnahme",
+# ─── Spaltentitel ──────────────────────────────────────────────────────────────
+COLS = [
+    "Ebene",
+    "Bundesland",
+    "Träger / Ministerium",
+    "Einzelplan / Kapitel / Titel",
+    "Maßnahme / Titel",
     "Beschreibung",
-    "Förderbereich", "Betrag (Mio. €)", "Haushaltsjahr",
-    "Quelle / Anmerkung"
+    "Förderbereich",
+    "Betrag (Mio. €)",
+    "Haushaltsjahr",
+    "Quelle / Anmerkung",
 ]
 
 # ─── Hilfsfunktionen ──────────────────────────────────────────────────────────
 
-def header_fill(hex_color: str) -> PatternFill:
+def hfill(hex_color: str) -> PatternFill:
     return PatternFill("solid", fgColor=hex_color)
 
 def thin_border() -> Border:
-    s = Side(style="thin", color="CCCCCC")
+    s = Side(style="thin", color="BBBBBB")
     return Border(left=s, right=s, top=s, bottom=s)
 
-def apply_header_row(ws, row_num: int, values: list, fill_hex: str,
-                     font_color: str = "FFFFFF"):
-    fill = header_fill(fill_hex)
-    font = Font(bold=True, color=font_color, size=10)
-    border = thin_border()
-    for col_num, val in enumerate(values, start=1):
-        cell = ws.cell(row=row_num, column=col_num, value=val)
-        cell.fill = fill
-        cell.font = font
-        cell.border = border
+def header_row(ws, row: int, values: list, fill: str,
+               font_color: str = "FFFFFF", size: int = 10):
+    f = hfill(fill)
+    ft = Font(bold=True, color=font_color, size=size)
+    brd = thin_border()
+    for c, v in enumerate(values, 1):
+        cell = ws.cell(row=row, column=c, value=v)
+        cell.fill = f
+        cell.font = ft
+        cell.border = brd
         cell.alignment = Alignment(wrap_text=True, vertical="center",
                                    horizontal="center")
 
-def write_data_row(ws, row_num: int, values: list,
-                   fill_hex: str | None = None):
-    fill = header_fill(fill_hex) if fill_hex else None
-    border = thin_border()
-    for col_num, val in enumerate(values, start=1):
-        cell = ws.cell(row=row_num, column=col_num, value=val)
-        if fill:
-            cell.fill = fill
-        cell.border = border
+def data_row(ws, row: int, values: list, bg: str | None = None):
+    brd = thin_border()
+    for c, v in enumerate(values, 1):
+        cell = ws.cell(row=row, column=c, value=v)
+        if bg:
+            cell.fill = hfill(bg)
+        cell.border = brd
         cell.alignment = Alignment(wrap_text=True, vertical="top")
-        # Währungsformat für Beträge
-        if col_num == 8:  # Betrag-Spalte
-            cell.number_format = '#,##0.00" Mio. €"'
+        if c == 8:  # Betrag
+            cell.number_format = '#,##0.00'
             cell.alignment = Alignment(horizontal="right", vertical="top")
 
-def autofit_columns(ws, max_width: int = 60):
-    for col in ws.columns:
-        max_len = 0
-        col_letter = get_column_letter(col[0].column)
-        for cell in col:
-            if cell.value:
-                lines = str(cell.value).split("\n")
-                for line in lines:
-                    max_len = max(max_len, len(line))
-        ws.column_dimensions[col_letter].width = min(max_len + 4, max_width)
+def set_col_widths(ws, widths: list[tuple[str, float]]):
+    for col, w in widths:
+        ws.column_dimensions[col].width = w
 
-# ─── Datei 1: Nach Haushaltspositionen ────────────────────────────────────────
+# ─── DATEI 1: Nach Haushaltspositionen ────────────────────────────────────────
 
-def create_file_by_positionen():
+def file_positionen():
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Sportförderung nach Positionen"
+    ws.title = "Alle Positionen"
 
-    # Titel-Zeile
+    # Titelzeile
     ws.merge_cells("A1:J1")
-    title_cell = ws["A1"]
-    title_cell.value = (
-        "Sportförderung in Deutschland – Bundesministerien, Landesministerien und Kommunen "
-        "(nach Haushaltspositionen, Stand 2024/2025)"
-    )
-    title_cell.font = Font(bold=True, size=13, color="1F3864")
-    title_cell.alignment = Alignment(horizontal="center", vertical="center",
-                                     wrap_text=True)
-    ws.row_dimensions[1].height = 40
+    c = ws["A1"]
+    c.value = ("Sportförderung in Deutschland – Bundesministerien, Landesministerien "
+               "und Kommunen │ Haushaltspositionen 2024/2025/2026")
+    c.font = Font(bold=True, size=14, color="1A237E")
+    c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[1].height = 44
 
-    # Hinweis-Zeile
+    # Hinweiszeile
     ws.merge_cells("A2:J2")
-    hint_cell = ws["A2"]
-    hint_cell.value = (
-        "Hinweis: Beträge in Millionen Euro (Mio. €). Schätzwerte für kommunale Ebene "
-        "sind als solche in der Quellspalte markiert. Primärquellen: BMI, Bundestag, "
-        "Landesregierungen, Landessportbünde, DOSB."
-    )
-    hint_cell.font = Font(italic=True, size=9, color="555555")
-    hint_cell.alignment = Alignment(wrap_text=True, vertical="top")
-    ws.row_dimensions[2].height = 30
+    h = ws["A2"]
+    h.value = ("Beträge in Mio. €  │  Quellen: BMI EP 06, Bundestag hib, DOSB, Landeshaushalte, "
+               "Landessportbünde, kommunale Haushalte  │  Kommunale Werte teilweise Schätzungen "
+               "│  Stand: März 2026")
+    h.font = Font(italic=True, size=8, color="555555")
+    h.alignment = Alignment(wrap_text=True, vertical="center")
+    ws.row_dimensions[2].height = 28
 
-    # Header
-    apply_header_row(ws, 3, COLS_POSITIONEN, "1F3864")
-    ws.row_dimensions[3].height = 30
+    header_row(ws, 3, COLS, "1A237E")
+    ws.row_dimensions[3].height = 32
     ws.freeze_panes = "A4"
 
-    # Ebene-Farbmap
-    EBENE_COLOR = {
-        "Bund":    "D6E4F0",
-        "Land":    "D5F0D6",
-        "Kommune": "FFF3CD",
-    }
+    EBENE_BG = {"Bund": "E3F2FD", "Land": "E8F5E9", "Kommune": "FFF8E1"}
 
-    # Daten sortiert: Bund → Land → Kommune, innerhalb Bundesland alpha
     sorted_data = sorted(DATA, key=lambda r: (
-        {"Bund": 0, "Land": 1, "Kommune": 2}.get(r[0], 3), r[1], r[4]
+        {"Bund": 0, "Land": 1, "Kommune": 2}.get(r[0], 9), r[1], r[4]
     ))
 
-    for r_idx, row in enumerate(sorted_data, start=4):
-        fill_hex = EBENE_COLOR.get(row[0])
-        # Leichte Zebra-Wechslung innerhalb einer Ebene
-        if r_idx % 2 == 0 and fill_hex:
-            # Etwas dunklere Variante
-            fill_hex_alt = fill_hex  # Wir belassen es, Row-Highlight reicht
-        write_data_row(ws, r_idx, list(row), fill_hex)
+    for i, row in enumerate(sorted_data, start=4):
+        data_row(ws, i, list(row), EBENE_BG.get(row[0]))
 
-    # Gesamtsumme
-    last_row = 3 + len(sorted_data)
-    total_row = last_row + 2
-    ws.cell(row=total_row, column=7, value="SUMME GESAMT").font = Font(bold=True)
-    total_cell = ws.cell(row=total_row, column=8)
-    total_cell.value = sum(row[7] for row in DATA)
-    total_cell.number_format = '#,##0.00" Mio. €"'
-    total_cell.font = Font(bold=True, color="CC0000")
-    total_cell.alignment = Alignment(horizontal="right")
+    # Summe gesamt
+    last = 3 + len(sorted_data)
+    ws.cell(row=last + 2, column=7, value="GESAMTSUMME (Mio. €)").font = Font(bold=True, size=11)
+    sc = ws.cell(row=last + 2, column=8, value=round(sum(r[7] for r in DATA), 2))
+    sc.number_format = '#,##0.00'
+    sc.font = Font(bold=True, size=11, color="B71C1C")
+    sc.alignment = Alignment(horizontal="right")
+    ws.cell(row=last + 3, column=7,
+            value="Hinweis: Mehrfachzählungen möglich (Bund → Land → Kommune-Flüsse)").font = Font(
+        italic=True, size=8, color="777777")
 
-    autofit_columns(ws)
-    ws.column_dimensions["A"].width = 12
-    ws.column_dimensions["B"].width = 22
-    ws.column_dimensions["C"].width = 40
-    ws.column_dimensions["D"].width = 28
-    ws.column_dimensions["E"].width = 40
-    ws.column_dimensions["F"].width = 55
-    ws.column_dimensions["G"].width = 22
-    ws.column_dimensions["H"].width = 14
-    ws.column_dimensions["I"].width = 12
-    ws.column_dimensions["J"].width = 50
+    col_widths = [("A",13),("B",24),("C",48),("D",34),("E",44),
+                  ("F",62),("G",24),("H",14),("I",13),("J",56)]
+    set_col_widths(ws, col_widths)
 
-    # Zweites Tabellenblatt: Nur Bund
-    ws_bund = wb.create_sheet("Bundesebene")
-    apply_header_row(ws_bund, 1, COLS_POSITIONEN, "1F3864")
-    bund_data = [r for r in sorted_data if r[0] == "Bund"]
-    for r_idx, row in enumerate(bund_data, start=2):
-        write_data_row(ws_bund, r_idx, list(row), "D6E4F0")
-    ws_bund.freeze_panes = "A2"
-    for col_dim, width in [("A",12),("B",18),("C",45),("D",30),("E",40),
-                            ("F",55),("G",22),("H",14),("I",12),("J",50)]:
-        ws_bund.column_dimensions[col_dim].width = width
+    # Zusatzblätter per Ebene
+    for ebene, fill_h, fill_r, title_suffix in [
+        ("Bund",    "0D47A1", "DCEEFB", "Bundesebene"),
+        ("Land",    "1B5E20", "DCF5DC", "Länderebene"),
+        ("Kommune", "E65100", "FFF3E0", "Kommunale Ebene"),
+    ]:
+        ws2 = wb.create_sheet(title_suffix)
+        header_row(ws2, 1, COLS, fill_h)
+        ws2.row_dimensions[1].height = 28
+        ws2.freeze_panes = "A2"
+        rows = [r for r in sorted_data if r[0] == ebene]
+        for i, row in enumerate(rows, start=2):
+            data_row(ws2, i, list(row), fill_r)
+        # Summe
+        last2 = 1 + len(rows)
+        ws2.cell(row=last2 + 1, column=7, value=f"Summe {title_suffix}").font = Font(bold=True)
+        sc2 = ws2.cell(row=last2 + 1, column=8,
+                        value=round(sum(r[7] for r in rows), 2))
+        sc2.number_format = '#,##0.00'
+        sc2.font = Font(bold=True, color="B71C1C")
+        sc2.alignment = Alignment(horizontal="right")
+        set_col_widths(ws2, col_widths)
 
-    # Drittes Tabellenblatt: Nur Länder
-    ws_land = wb.create_sheet("Länderebene")
-    apply_header_row(ws_land, 1, COLS_POSITIONEN, "1A5C2A")
-    land_data = [r for r in sorted_data if r[0] == "Land"]
-    for r_idx, row in enumerate(land_data, start=2):
-        write_data_row(ws_land, r_idx, list(row), "D5F0D6")
-    ws_land.freeze_panes = "A2"
-    for col_dim, width in [("A",12),("B",22),("C",45),("D",30),("E",40),
-                            ("F",55),("G",22),("H",14),("I",12),("J",50)]:
-        ws_land.column_dimensions[col_dim].width = width
-
-    # Viertes Tabellenblatt: Nur Kommunen
-    ws_komm = wb.create_sheet("Kommunale Ebene")
-    apply_header_row(ws_komm, 1, COLS_POSITIONEN, "7D5B00")
-    komm_data = [r for r in sorted_data if r[0] == "Kommune"]
-    for r_idx, row in enumerate(komm_data, start=2):
-        write_data_row(ws_komm, r_idx, list(row), "FFF3CD")
-    ws_komm.freeze_panes = "A2"
-    for col_dim, width in [("A",12),("B",22),("C",35),("D",30),("E",40),
-                            ("F",55),("G",22),("H",14),("I",12),("J",50)]:
-        ws_komm.column_dimensions[col_dim].width = width
-
-    out_path = "/home/user/claude-plugins-journalism/sportfoerderung_nach_haushaltspositionen.xlsx"
-    wb.save(out_path)
-    print(f"Datei 1 gespeichert: {out_path}")
-    return out_path
+    path = "/home/user/claude-plugins-journalism/sportfoerderung_nach_haushaltspositionen.xlsx"
+    wb.save(path)
+    print(f"Datei 1 gespeichert: {path}")
+    return path
 
 
-# ─── Datei 2: Nach Bundesländern ──────────────────────────────────────────────
+# ─── DATEI 2: Nach Bundesland ─────────────────────────────────────────────────
 
-BUNDESLAENDER_ORDER = [
+BL_ORDER = [
     "Gesamt (Bund)",
     "Baden-Württemberg", "Bayern", "Berlin", "Brandenburg", "Bremen",
     "Hamburg", "Hessen", "Mecklenburg-Vorpommern", "Niedersachsen",
@@ -500,170 +838,199 @@ BUNDESLAENDER_ORDER = [
 ]
 
 BL_FILL = {
-    "Gesamt (Bund)":           "1F3864",
-    "Baden-Württemberg":       "C6EFCE",
-    "Bayern":                  "FFEB9C",
-    "Berlin":                  "C9C9C9",
-    "Brandenburg":             "BDD7EE",
-    "Bremen":                  "D9D2E9",
-    "Hamburg":                 "FCE5CD",
-    "Hessen":                  "D9EAD3",
-    "Mecklenburg-Vorpommern":  "CFE2F3",
-    "Niedersachsen":           "FFF2CC",
-    "Nordrhein-Westfalen":     "F4CCCC",
-    "Rheinland-Pfalz":        "D9D2E9",
-    "Saarland":                "EAD1DC",
-    "Sachsen":                 "D0E0E3",
-    "Sachsen-Anhalt":          "B6D7A8",
-    "Schleswig-Holstein":      "A2C4C9",
-    "Thüringen":               "E6B8A2",
+    "Gesamt (Bund)":           ("1A237E", "FFFFFF"),
+    "Baden-Württemberg":       ("006400", "FFFFFF"),
+    "Bayern":                  ("0055A4", "FFFFFF"),
+    "Berlin":                  ("CC0000", "FFFFFF"),
+    "Brandenburg":             ("C8102E", "FFFFFF"),
+    "Bremen":                  ("002868", "FFFFFF"),
+    "Hamburg":                 ("E2001A", "FFFFFF"),
+    "Hessen":                  ("CC0000", "FFFFFF"),
+    "Mecklenburg-Vorpommern":  ("006AB3", "FFFFFF"),
+    "Niedersachsen":           ("FFCC00", "000000"),
+    "Nordrhein-Westfalen":     ("009A44", "FFFFFF"),
+    "Rheinland-Pfalz":         ("C8102E", "FFFFFF"),
+    "Saarland":                ("003087", "FFFFFF"),
+    "Sachsen":                 ("006600", "FFFFFF"),
+    "Sachsen-Anhalt":          ("FFFF00", "000000"),
+    "Schleswig-Holstein":      ("003087", "FFFFFF"),
+    "Thüringen":               ("CC0000", "FFFFFF"),
 }
 
-def create_file_by_bundesland():
+BL_ROW_BG = {
+    "Gesamt (Bund)":           "D9E8FB",
+    "Baden-Württemberg":       "E8F5E8",
+    "Bayern":                  "E8F0FB",
+    "Berlin":                  "FFECEC",
+    "Brandenburg":             "FFECEC",
+    "Bremen":                  "ECF0FF",
+    "Hamburg":                 "FFECEC",
+    "Hessen":                  "FFECEC",
+    "Mecklenburg-Vorpommern":  "E8F0FF",
+    "Niedersachsen":           "FFFDE8",
+    "Nordrhein-Westfalen":     "ECFBEC",
+    "Rheinland-Pfalz":         "FFECEC",
+    "Saarland":                "ECF0FF",
+    "Sachsen":                 "ECFBEC",
+    "Sachsen-Anhalt":          "FFFFCC",
+    "Schleswig-Holstein":      "ECF0FF",
+    "Thüringen":               "FFECEC",
+}
+
+
+def file_bundesland():
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Sportförderung nach Bundesland"
+    ws.title = "Nach Bundesland"
 
-    # Titel
     ws.merge_cells("A1:J1")
-    tc = ws["A1"]
-    tc.value = (
-        "Sportförderung in Deutschland – Übersicht nach Bundesländern "
-        "(Bundesministerien, Landesministerien und Kommunen, Stand 2024/2025)"
-    )
-    tc.font = Font(bold=True, size=13, color="1F3864")
-    tc.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    ws.row_dimensions[1].height = 40
+    c = ws["A1"]
+    c.value = ("Sportförderung in Deutschland – Übersicht nach Bundesland │ "
+               "Bundesministerien, Landesministerien und Kommunen │ 2024/2025/2026")
+    c.font = Font(bold=True, size=14, color="1A237E")
+    c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[1].height = 44
 
     ws.merge_cells("A2:J2")
-    hc = ws["A2"]
-    hc.value = (
-        "Hinweis: Beträge in Millionen Euro. Kommunale Werte sind Schätzwerte. "
-        "Für Bundesländer ohne vollständige Daten liegen nur Teilangaben vor."
-    )
-    hc.font = Font(italic=True, size=9, color="555555")
-    hc.alignment = Alignment(wrap_text=True, vertical="top")
-    ws.row_dimensions[2].height = 25
+    h = ws["A2"]
+    h.value = ("Beträge in Mio. €  │  Mehrfachzählungen möglich  │  "
+               "Kommunale Werte = Schätzungen  │  Stand: März 2026")
+    h.font = Font(italic=True, size=8, color="555555")
+    h.alignment = Alignment(wrap_text=True, vertical="center")
+    ws.row_dimensions[2].height = 24
 
-    apply_header_row(ws, 3, COLS_POSITIONEN, "1F3864")
-    ws.row_dimensions[3].height = 30
+    header_row(ws, 3, COLS, "1A237E")
+    ws.row_dimensions[3].height = 32
     ws.freeze_panes = "A4"
 
-    current_row = 4
-    grand_total = 0.0
+    current = 4
+    sorted_data = sorted(DATA, key=lambda r: (
+        BL_ORDER.index(r[1]) if r[1] in BL_ORDER else 99, r[0], r[4]
+    ))
 
-    bl_totals = {}  # Bundesland → Summe
-
-    for bundesland in BUNDESLAENDER_ORDER:
-        bl_rows = [r for r in DATA if r[1] == bundesland]
-        if not bl_rows:
+    bl_totals = {}
+    for bl in BL_ORDER:
+        rows = [r for r in sorted_data if r[1] == bl]
+        if not rows:
             continue
 
-        # Bundesland-Zwischentitel
-        ws.merge_cells(
-            start_row=current_row, start_column=1,
-            end_row=current_row, end_column=10
-        )
-        bl_label = (
-            f"■  {bundesland}"
-            if bundesland != "Gesamt (Bund)"
-            else f"■  BUNDESEBENE – {bundesland}"
-        )
-        header_cell = ws.cell(row=current_row, column=1, value=bl_label)
-        fill_hex = BL_FILL.get(bundesland, "EEEEEE")
-        header_cell.fill = header_fill(fill_hex)
-        font_color = "FFFFFF" if bundesland == "Gesamt (Bund)" else "000000"
-        header_cell.font = Font(bold=True, size=11, color=font_color)
-        header_cell.alignment = Alignment(vertical="center")
-        ws.row_dimensions[current_row].height = 22
-        current_row += 1
+        # Bundesland-Header
+        ws.merge_cells(start_row=current, start_column=1,
+                       end_row=current, end_column=10)
+        hc = ws.cell(row=current, column=1,
+                     value=f"  ▶  {bl.upper()}")
+        fill_h, font_c = BL_FILL.get(bl, ("444444", "FFFFFF"))
+        hc.fill = hfill(fill_h)
+        hc.font = Font(bold=True, size=11, color=font_c)
+        hc.alignment = Alignment(vertical="center")
+        ws.row_dimensions[current].height = 22
+        current += 1
 
-        bl_total = 0.0
-        for row in sorted(bl_rows, key=lambda r: (r[0], r[4])):
-            write_data_row(ws, current_row, list(row))
-            # Leichte Hintergrundfarbe nach Ebene
-            bg = {"Bund": "EEF4FB", "Land": "F0FBF0",
-                  "Kommune": "FFFCEE"}.get(row[0], "FFFFFF")
-            for col in range(1, 11):
-                ws.cell(row=current_row, column=col).fill = header_fill(bg)
-            # Betrag-Zelle erneut formatieren
-            amt_cell = ws.cell(row=current_row, column=8)
-            amt_cell.number_format = '#,##0.00" Mio. €"'
-            amt_cell.alignment = Alignment(horizontal="right", vertical="top")
-            # Borders
-            for col in range(1, 11):
-                ws.cell(row=current_row, column=col).border = thin_border()
-            bl_total += row[7]
-            current_row += 1
+        row_bg = BL_ROW_BG.get(bl, "F9F9F9")
+        bl_sum = 0.0
+        for row in rows:
+            data_row(ws, current, list(row), row_bg)
+            bl_sum += row[7]
+            current += 1
 
-        # Bundesland-Summe
-        sum_cell_label = ws.cell(row=current_row, column=7,
-                                  value=f"Summe {bundesland}")
-        sum_cell_label.font = Font(bold=True)
-        sum_cell_label.alignment = Alignment(horizontal="right")
-        sum_cell = ws.cell(row=current_row, column=8, value=bl_total)
-        sum_cell.number_format = '#,##0.00" Mio. €"'
-        sum_cell.font = Font(bold=True)
-        sum_cell.fill = header_fill("F2F2F2")
-        sum_cell.alignment = Alignment(horizontal="right")
-        sum_cell_label.fill = header_fill("F2F2F2")
-        grand_total += bl_total
-        bl_totals[bundesland] = bl_total
-        current_row += 2  # Leerzeile
+        # Subtotal
+        ws.cell(row=current, column=7,
+                value=f"Summe {bl}").font = Font(bold=True)
+        ws.cell(row=current, column=7).alignment = Alignment(horizontal="right")
+        sc = ws.cell(row=current, column=8, value=round(bl_sum, 2))
+        sc.number_format = '#,##0.00'
+        sc.font = Font(bold=True)
+        sc.fill = hfill("F0F0F0")
+        sc.alignment = Alignment(horizontal="right")
+        ws.cell(row=current, column=7).fill = hfill("F0F0F0")
+        bl_totals[bl] = bl_sum
+        current += 2  # Leerzeile
 
     # Gesamtsumme
-    ws.cell(row=current_row, column=7, value="GESAMTSUMME (alle Ebenen)").font = Font(
-        bold=True, size=11, color="CC0000"
-    )
-    gtc = ws.cell(row=current_row, column=8, value=grand_total)
-    gtc.number_format = '#,##0.00" Mio. €"'
-    gtc.font = Font(bold=True, size=11, color="CC0000")
+    ws.cell(row=current, column=7,
+            value="GESAMTSUMME (alle Bundesländer + Bund)").font = Font(bold=True, size=11)
+    gtc = ws.cell(row=current, column=8, value=round(sum(bl_totals.values()), 2))
+    gtc.number_format = '#,##0.00'
+    gtc.font = Font(bold=True, size=11, color="B71C1C")
     gtc.alignment = Alignment(horizontal="right")
 
-    # Spaltenbreiten
-    for col_dim, width in [("A",12),("B",22),("C",42),("D",30),("E",40),
-                            ("F",55),("G",22),("H",16),("I",12),("J",50)]:
-        ws.column_dimensions[col_dim].width = width
+    col_widths = [("A",13),("B",24),("C",48),("D",34),("E",44),
+                  ("F",62),("G",24),("H",14),("I",13),("J",56)]
+    set_col_widths(ws, col_widths)
 
-    # Zweites Blatt: Zusammenfassung je Bundesland
-    ws_sum = wb.create_sheet("Zusammenfassung Bundesländer")
-    sum_cols = ["Bundesland", "Ebene(n)", "Betrag gesamt (Mio. €)", "Haushaltsjahr(e)",
-                "Anmerkung"]
-    apply_header_row(ws_sum, 1, sum_cols, "1F3864")
-    ws_sum.freeze_panes = "A2"
+    # Zusammenfassungsblatt
+    ws2 = wb.create_sheet("Zusammenfassung je Bundesland")
+    sum_cols = ["Bundesland", "Ebene(n)", "Anzahl Positionen",
+                "Summe Förderung (Mio. €)", "Haushaltsjahre", "Anmerkung"]
+    header_row(ws2, 1, sum_cols, "1A237E")
+    ws2.freeze_panes = "A2"
 
-    for r_idx, bundesland in enumerate(BUNDESLAENDER_ORDER, start=2):
-        bl_rows = [r for r in DATA if r[1] == bundesland]
-        if not bl_rows:
+    for r_idx, bl in enumerate(BL_ORDER, start=2):
+        rows = [r for r in DATA if r[1] == bl]
+        if not rows:
             continue
-        ebenen = ", ".join(sorted(set(r[0] for r in bl_rows)))
-        years  = ", ".join(sorted(set(str(r[8]) for r in bl_rows)))
-        total  = sum(r[7] for r in bl_rows)
-        fill_hex = BL_FILL.get(bundesland, "EEEEEE")
-        font_col = "FFFFFF" if bundesland == "Gesamt (Bund)" else "000000"
-        vals = [bundesland, ebenen, total, years,
-                f"{len(bl_rows)} Haushaltspositionen"]
-        for c_idx, val in enumerate(vals, start=1):
-            cell = ws_sum.cell(row=r_idx, column=c_idx, value=val)
-            cell.fill = header_fill(fill_hex)
-            cell.font = Font(color=font_col)
+        fill_h, font_c = BL_FILL.get(bl, ("EEEEEE", "000000"))
+        ebenen = ", ".join(sorted(set(r[0] for r in rows)))
+        years = ", ".join(sorted(set(str(r[8]) for r in rows)))
+        total = round(sum(r[7] for r in rows), 2)
+        note = (f"{len(rows)} Haushaltspositionen; davon "
+                f"Spitzensport: {sum(1 for r in rows if 'Spitzensport' in r[6])}; "
+                f"Breitensport: {sum(1 for r in rows if 'Breitensport' in r[6])}")
+        vals = [bl, ebenen, len(rows), total, years, note]
+        for c_idx, val in enumerate(vals, 1):
+            cell = ws2.cell(row=r_idx, column=c_idx, value=val)
+            cell.fill = hfill(fill_h)
+            cell.font = Font(color=font_c)
             cell.border = thin_border()
-            if c_idx == 3:
-                cell.number_format = '#,##0.00" Mio. €"'
+            if c_idx == 4:
+                cell.number_format = '#,##0.00'
                 cell.alignment = Alignment(horizontal="right")
 
-    for col_dim, width in [("A",25),("B",20),("C",22),("D",22),("E",35)]:
-        ws_sum.column_dimensions[col_dim].width = width
+    set_col_widths(ws2, [("A",28),("B",22),("C",22),("D",24),("E",22),("F",58)])
 
-    out_path = "/home/user/claude-plugins-journalism/sportfoerderung_nach_bundeslaendern.xlsx"
-    wb.save(out_path)
-    print(f"Datei 2 gespeichert: {out_path}")
-    return out_path
+    # Balkendiagramm-Datenblatt (Rohdaten für Diagramme)
+    ws3 = wb.create_sheet("Diagrammdaten")
+    header_row(ws3, 1,
+               ["Bundesland", "Bund-Anteil (Mio. €)", "Land-Anteil (Mio. €)",
+                "Kommunal-Anteil (Mio. €)", "Gesamt (Mio. €)",
+                "Spitzensport-Anteil (Mio. €)", "Breitensport-Anteil (Mio. €)"],
+               "37474F")
+    ws3.freeze_panes = "A2"
+    for r_idx, bl in enumerate(BL_ORDER, start=2):
+        rows = [r for r in DATA if r[1] == bl]
+        if not rows:
+            continue
+        bund = round(sum(r[7] for r in rows if r[0] == "Bund"), 2)
+        land = round(sum(r[7] for r in rows if r[0] == "Land"), 2)
+        komm = round(sum(r[7] for r in rows if r[0] == "Kommune"), 2)
+        spitz = round(sum(r[7] for r in rows if "Spitzensport" in r[6] and "Breiten" not in r[6]), 2)
+        breit = round(sum(r[7] for r in rows if "Breitensport" in r[6] and "Spitz" not in r[6]), 2)
+        ws3.cell(row=r_idx, column=1, value=bl)
+        for c_idx, val in enumerate([bund, land, komm, bund+land+komm, spitz, breit], 2):
+            cell = ws3.cell(row=r_idx, column=c_idx, value=val)
+            cell.number_format = '#,##0.00'
+            cell.alignment = Alignment(horizontal="right")
+    set_col_widths(ws3, [("A",28),("B",22),("C",22),("D",22),("E",18),("F",24),("G",24)])
+
+    path = "/home/user/claude-plugins-journalism/sportfoerderung_nach_bundeslaendern.xlsx"
+    wb.save(path)
+    print(f"Datei 2 gespeichert: {path}")
+    return path
 
 
 if __name__ == "__main__":
-    p1 = create_file_by_positionen()
-    p2 = create_file_by_bundesland()
-    print("\nFertig! Erstellte Dateien:")
+    p1 = file_positionen()
+    p2 = file_bundesland()
+    total = sum(r[7] for r in DATA)
+    bund_total = sum(r[7] for r in DATA if r[0] == "Bund")
+    land_total = sum(r[7] for r in DATA if r[0] == "Land")
+    komm_total = sum(r[7] for r in DATA if r[0] == "Kommune")
+    print(f"\nStatistik:")
+    print(f"  Gesamtpositionen: {len(DATA)}")
+    print(f"  Summe gesamt:     {total:,.2f} Mio. €")
+    print(f"  davon Bund:       {bund_total:,.2f} Mio. €")
+    print(f"  davon Länder:     {land_total:,.2f} Mio. €")
+    print(f"  davon Kommunen:   {komm_total:,.2f} Mio. €")
+    print(f"\nDateien:")
     print(f"  1. {p1}")
     print(f"  2. {p2}")
