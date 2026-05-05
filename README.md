@@ -1,6 +1,6 @@
 # Journalism Tools for Claude Code
 
-A plugin marketplace with tools for investigative journalism: Python script execution with automatic dependency management, data preprocessing with provenance tracking, and transparent data analysis designed to be defensible under scrutiny.
+A plugin marketplace with tools for investigative journalism: Python script execution with automatic dependency management, data preprocessing with provenance tracking, transparent data analysis, document extraction, tipsheet generation, and FARA disclosure research designed to be defensible under scrutiny.
 
 ## Installation
 
@@ -13,11 +13,15 @@ Add the marketplace and install the plugin:
 
 ## Skills
 
-Once installed, you'll have access to four skills:
+Once installed, you'll have access to six skills:
 
 ### `/journalism-tools:python-runner`
 
 Run Python scripts with automatic dependency management using [uv](https://github.com/astral-sh/uv). No manual environment setup required—dependencies are installed automatically in isolated environments.
+
+### `/journalism-tools:fara`
+
+Query the US DOJ Foreign Agents Registration Act (FARA) public eFile API for registrants, foreign principals, short-form registrants, and PDF filing URLs. Includes a stdlib-only client that handles rate limits, retries, schema quirks, bulk CSV downloads, and fuzzy registrant-name searches.
 
 ### `/journalism-tools:journalistic-data-preprocessing`
 
@@ -53,6 +57,10 @@ Core principles:
 - **Human-in-the-loop**: Schema must be approved before extraction proceeds
 - **Transparent ambiguity**: Redactions, illegible text, and low-confidence values are explicitly marked
 - **Zero-install review**: Generates a self-contained HTML interface for journalist verification
+
+### `/journalism-tools:tipsheet-generator`
+
+Generate investigative journalism tipsheets from unfamiliar datasets, document collections, databases, or other raw material. The workflow inventories every source, profiles structure and coverage, detects macro trends and point anomalies, and turns evidence-backed signals into leads with baselines, caveats, and suggested reporting next steps.
 
 ## Local Development
 
